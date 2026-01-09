@@ -35,7 +35,7 @@ A dockerized backend service for managing sports venue bookings with availabilit
 cd venue-booking
 
 # Start the application (builds and runs automatically)
-docker-compose up --build
+docker-compose up -d
 
 # The API will be available at http://localhost:8080
 ```
