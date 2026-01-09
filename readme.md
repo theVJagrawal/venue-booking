@@ -4,7 +4,7 @@ A dockerized backend service for managing sports venue bookings with availabilit
 
 ## Tech Stack
 
-- **Java 17** with Spring Boot 3.2.0
+- **Java 17** with Spring Boot 4.0.1
 - **MySQL 8.0** for persistence
 - **Docker & Docker Compose** for containerization
 - **JPA/Hibernate** for ORM
@@ -14,12 +14,14 @@ A dockerized backend service for managing sports venue bookings with availabilit
 
 - ✅ Venue management (CRUD operations)
 - ✅ Time slot management with overlap prevention
-- ✅ Availability checking by sport and time range
+- ✅ Venue availability check by sport
 - ✅ Booking creation with double-booking prevention
-- ✅ Booking cancellation with automatic slot release
+- ✅ Booking cancellation with slot re-availability
 - ✅ Pessimistic locking for concurrency safety
 - ✅ Sports validation via external API
 - ✅ Comprehensive error handling
+- ✅ Dockerized application & database
+
 
 ## Quick Start
 
@@ -28,26 +30,65 @@ A dockerized backend service for managing sports venue bookings with availabilit
 - Docker & Docker Compose installed
 - Port 8080 and 3306 available
 
-### Running the Application
+## 🚀 Running the Application (Docker)
 
+### Start Application
 ```bash
-# Clone or extract the project
-cd venue-booking
-
-# Start the application (builds and runs automatically)
 docker-compose up -d
-
-# The API will be available at http://localhost:8080
 ```
 
-### Stopping the Application
-
+### Stop Application
 ```bash
 docker-compose down
+```
 
-# To remove volumes (database data)
+### Stop & Clear DB
+```bash
 docker-compose down -v
 ```
+
+---
+
+## 🐳 Docker Image (CI/CD)
+
+Image built & published automatically via GitHub Actions.
+
+Image:
+thevjagrawal/venue-booking:latest
+
+Run:
+```bash
+docker run -p 8080:8080 thevjagrawal/venue-booking:latest
+```
+
+---
+
+
+## 🏗️ High-Level Architecture
+
+Client  
+→ Spring Boot REST APIs  
+→ Service Layer (Business Rules & Validation)  
+→ JPA / Hibernate  
+→ MySQL Database (Docker)
+
+---
+
+## 🧠 Sports Data Handling
+
+Sports are not hardcoded.
+
+### Source of Truth
+External API:
+https://stapubox.com/sportslist/
+
+### Approach
+- Sports data fetched from public API
+- sport_id / sport_code stored in DB
+- Venue creation & availability checks rely on DB
+- Avoids runtime dependency on external API
+
+---
 
 ## Database Schema
 
@@ -105,7 +146,7 @@ Response: 201 Created
   "id": 1,
   "name": "Central Sports Arena",
   "location": "123 Main St, City",
-  "sportId": "CRICKET",
+  "sportId": "7031809",
   "sportName": "Cricket"
 }
 ```
@@ -120,7 +161,7 @@ Response: 200 OK
     "id": 1,
     "name": "Central Sports Arena",
     "location": "123 Main St, City",
-    "sportId": "CRICKET",
+    "sportId": "7031809",
     "sportName": "Cricket"
   }
 ]
@@ -135,7 +176,7 @@ Response: 200 OK
   "id": 1,
   "name": "Central Sports Arena",
   "location": "123 Main St, City",
-  "sportId": "CRICKET",
+  "sportId": "7031809",
   "sportName": "Cricket"
 }
 ```
@@ -157,7 +198,7 @@ Response: 200 OK
     "id": 1,
     "name": "Central Sports Arena",
     "location": "123 Main St, City",
-    "sportId": "CRICKET",
+    "sportId": "7031809",
     "sportName": "Cricket",
     "availableSlotsCount": 5
   },
@@ -165,7 +206,7 @@ Response: 200 OK
     "id": 2,
     "name": "Downtown Football Field",
     "location": "456 Oak Ave",
-    "sportId": "FOOTBALL",
+    "sportId": "7061509",
     "sportName": "Football",
     "availableSlotsCount": 3
   }
@@ -294,40 +335,58 @@ Response: 200 OK
 ```
 venue-booking/
 ├── src/
-│   └── main/
-│       ├── java/com/booking/venue/
-│       │   ├── VenueBookingApplication.java
-│       │   ├── controller/
-│       │   │   ├── VenueController.java
-│       │   │   ├── TimeSlotController.java
-│       │   │   └── BookingController.java
-│       │   ├── service/
-│       │   │   ├── VenueService.java
-│       │   │   ├── TimeSlotService.java
-│       │   │   └── BookingService.java
-│       │   ├── repository/
-│       │   │   ├── VenueRepository.java
-│       │   │   ├── TimeSlotRepository.java
-│       │   │   └── BookingRepository.java
-│       │   ├── entity/
-│       │   │   ├── Venue.java
-│       │   │   ├── TimeSlot.java
-│       │   │   └── Booking.java
-│       │   ├── dto/
-│       │   │   ├── VenueDTO.java
-│       │   │   ├── TimeSlotDTO.java
-│       │   │   └── BookingDTO.java
-│       │   └── exception/
-│       │       ├── GlobalExceptionHandler.java
-│       │       ├── ResourceNotFoundException.java
-│       │       ├── BookingException.java
-│       │       └── SlotOverlapException.java
-│       └── resources/
-│           └── application.properties
+│   ├── main/
+│   │   ├── java/com/booking/venuebooking/
+│   │   │   ├── VenueBookingApplication.java
+│   │   │   ├── controller/
+│   │   │   │   ├── VenueController.java
+│   │   │   │   ├── TimeSlotController.java
+│   │   │   │   └── BookingController.java
+│   │   │   ├── service/
+│   │   │   │   ├── VenueService.java
+│   │   │   │   ├── TimeSlotService.java
+│   │   │   │   ├── BookingService.java
+│   │   │   │   └── SportsSyncService.java
+│   │   │   ├── repository/
+│   │   │   │   ├── VenueRepository.java
+│   │   │   │   ├── TimeSlotRepository.java
+│   │   │   │   ├── BookingRepository.java
+│   │   │   │   └── SportRepository.java
+│   │   │   ├── entity/
+│   │   │   │   ├── Venue.java
+│   │   │   │   ├── TimeSlot.java
+│   │   │   │   ├── Booking.java
+│   │   │   │   └── Sport.java
+│   │   │   ├── dto/
+│   │   │   │   ├── VenueDTO.java
+│   │   │   │   ├── CreateVenueRequest.java
+│   │   │   │   ├── TimeSlotDTO.java
+│   │   │   │   ├── CreateSlotRequest.java
+│   │   │   │   ├── BookingDTO.java
+│   │   │   │   ├── CreateBookingRequest.java
+│   │   │   │   ├── SportDTO.java
+│   │   │   │   └── SportsApiResponse.java
+│   │   │   └── exception/
+│   │   │       ├── GlobalExceptionHandler.java
+│   │   │       ├── ResourceNotFoundException.java
+│   │   │       ├── BookingException.java
+│   │   │       ├── SlotOverlapException.java
+│   │   │       └── ErrorResponse.java
+│   │   └── resources/
+│   │       └── application.properties
+│   └── test/
+│       └── java/com/booking/venuebooking/
+│           └── VenueBookingApplicationTests.java
+├── target/
+│   └── venue-booking-0.0.1-SNAPSHOT.jar
+├── .mvn/
+│   └── wrapper/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── init.sql
 ├── pom.xml
+├── mvnw
+├── mvnw.cmd
 └── README.md
 ```
 
@@ -425,13 +484,16 @@ For optimal query performance, the following indexes are created:
 
 ## Future Enhancements
 
-- Payment integration
+- Scheduled job to periodically sync sports data from external API**
+  - Runs at fixed intervals (e.g. daily / hourly)
+  - Keeps sports data up-to-date without runtime dependency
+  - Handles API failures gracefully with retries and fallback
 - Multi-venue booking support
 - Recurring slot creation
 - Email notifications
 - Booking history and analytics
 - Rate limiting per customer
-- Admin authentication
+
 
 ## License
 
